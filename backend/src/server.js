@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
 
 import connectDB from "./config/db.js";
 
@@ -11,15 +12,21 @@ import applicationRoutes from "./routes/applicationRoutes.js";
 dotenv.config();
 
 const app = express();
+// Port
+const PORT = process.env.PORT || 5000;
+const __dirname = path.resolve();
 
 
 // Middleware
-app.use(cors());
+
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    cors({
+      origin: "http://localhost:5173",
+    })
+  );
+}
 app.use(express.json());
-
-
-// Database Connection
-connectDB();
 
 
 // Routes
@@ -28,17 +35,20 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 
 
-// Test Route
-app.get("/", (req, res) => {
-  res.send("Job Board API Running");
-});
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "../frontend/dist");
 
+  app.use(express.static(frontendPath));
 
-// Port
-const PORT = process.env.PORT || 5000;
+  app.get("/*any", (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
+  });
+}
 
 
 // Server Start
-app.listen(PORT, () => {
+connectDB().then(()=>{
+  app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  });
 });
